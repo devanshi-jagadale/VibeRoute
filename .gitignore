@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Environment
+.env
+
+# Frontend
+frontend/node_modules/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Data
+data/chromadb/
+data/*.pkl
+data/*.pt
+data/*.npz
+data/*.json
+data/dataset.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Logs
+cookies.txt
