@@ -1072,13 +1072,6 @@ async def spotify_save(req: SpotifySaveRequest):
 
 # ── Startup ───────────────────────────────────────────────────────────────────
 
-import asyncio
-
 @app.on_event("startup")
 async def startup_event():
-    """Load resources in background so port opens immediately."""
-    asyncio.create_task(_startup_background())
-
-async def _startup_background():
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _load_all)
+    _load_all()
