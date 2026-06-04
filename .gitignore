@@ -13,7 +13,7 @@ venv/
 frontend/node_modules/
 
 # Databases
-*.db
+data/language_sampler.db
 *.sqlite
 *.sqlite3
 
