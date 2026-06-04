@@ -18,12 +18,11 @@ frontend/node_modules/
 *.sqlite3
 
 # Data
-data/chromadb/
-data/*.pkl
-data/*.pt
 data/*.npz
-data/*.json
 data/dataset.csv
+data/classifier_stats.json
+data/last_playlist.json
+data/pairs_meta.json
 
 # OS
 .DS_Store

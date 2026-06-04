@@ -1,0 +1,202 @@
+{
+  "nodes": {
+    "0": {
+      "id": 0,
+      "label": "Upbeat Dance",
+      "description": "Energetic and lively tracks to get you moving on the dance floor",
+      "size": 1484
+    },
+    "1": {
+      "id": 1,
+      "label": "Energetic Beats",
+      "description": "Fast-paced and energetic songs to boost your mood and keep you active",
+      "size": 1857
+    },
+    "2": {
+      "id": 2,
+      "label": "Mellow Tunes",
+      "description": "Soothing and calming music to help you unwind and relax",
+      "size": 1470
+    },
+    "3": {
+      "id": 3,
+      "label": "High Energy",
+      "description": "Intense and dynamic tracks to fuel your workouts and high-energy activities",
+      "size": 1745
+    },
+    "4": {
+      "id": 4,
+      "label": "Electronic Pulse",
+      "description": "Infectious and rhythmic electronic music to keep you moving and grooving",
+      "size": 688
+    },
+    "5": {
+      "id": 5,
+      "label": "Experimental Vibes",
+      "description": "Unique and eclectic soundscapes to challenge your musical tastes and broaden your horizons",
+      "size": 23
+    },
+    "6": {
+      "id": 6,
+      "label": "Folk Pop",
+      "description": "Catchy and upbeat folk-inspired music with a pop twist",
+      "size": 1148
+    },
+    "7": {
+      "id": 7,
+      "label": "Indie Delights",
+      "description": "Quirky and charming indie tracks to discover new favorite artists and sounds",
+      "size": 1527
+    }
+  },
+  "edges": [
+    {
+      "source": 0,
+      "target": 1,
+      "weight": 0.8546,
+      "source_label": "Upbeat Dance",
+      "target_label": "Energetic Beats"
+    },
+    {
+      "source": 0,
+      "target": 2,
+      "weight": 0.7351,
+      "source_label": "Upbeat Dance",
+      "target_label": "Mellow Tunes"
+    },
+    {
+      "source": 0,
+      "target": 3,
+      "weight": 0.825,
+      "source_label": "Upbeat Dance",
+      "target_label": "High Energy"
+    },
+    {
+      "source": 0,
+      "target": 4,
+      "weight": 0.7775,
+      "source_label": "Upbeat Dance",
+      "target_label": "Electronic Pulse"
+    },
+    {
+      "source": 0,
+      "target": 6,
+      "weight": 0.7867,
+      "source_label": "Upbeat Dance",
+      "target_label": "Folk Pop"
+    },
+    {
+      "source": 0,
+      "target": 7,
+      "weight": 0.887,
+      "source_label": "Upbeat Dance",
+      "target_label": "Indie Delights"
+    },
+    {
+      "source": 1,
+      "target": 2,
+      "weight": 0.87,
+      "source_label": "Energetic Beats",
+      "target_label": "Mellow Tunes"
+    },
+    {
+      "source": 1,
+      "target": 3,
+      "weight": 0.7067,
+      "source_label": "Energetic Beats",
+      "target_label": "High Energy"
+    },
+    {
+      "source": 1,
+      "target": 4,
+      "weight": 0.749,
+      "source_label": "Energetic Beats",
+      "target_label": "Electronic Pulse"
+    },
+    {
+      "source": 1,
+      "target": 6,
+      "weight": 0.846,
+      "source_label": "Energetic Beats",
+      "target_label": "Folk Pop"
+    },
+    {
+      "source": 1,
+      "target": 7,
+      "weight": 0.8366,
+      "source_label": "Energetic Beats",
+      "target_label": "Indie Delights"
+    },
+    {
+      "source": 2,
+      "target": 3,
+      "weight": 0.6201,
+      "source_label": "Mellow Tunes",
+      "target_label": "High Energy"
+    },
+    {
+      "source": 2,
+      "target": 4,
+      "weight": 0.7221,
+      "source_label": "Mellow Tunes",
+      "target_label": "Electronic Pulse"
+    },
+    {
+      "source": 2,
+      "target": 6,
+      "weight": 0.8591,
+      "source_label": "Mellow Tunes",
+      "target_label": "Folk Pop"
+    },
+    {
+      "source": 2,
+      "target": 7,
+      "weight": 0.7619,
+      "source_label": "Mellow Tunes",
+      "target_label": "Indie Delights"
+    },
+    {
+      "source": 3,
+      "target": 4,
+      "weight": 0.8272,
+      "source_label": "High Energy",
+      "target_label": "Electronic Pulse"
+    },
+    {
+      "source": 3,
+      "target": 6,
+      "weight": 0.7317,
+      "source_label": "High Energy",
+      "target_label": "Folk Pop"
+    },
+    {
+      "source": 3,
+      "target": 7,
+      "weight": 0.8528,
+      "source_label": "High Energy",
+      "target_label": "Indie Delights"
+    },
+    {
+      "source": 4,
+      "target": 6,
+      "weight": 0.8557,
+      "source_label": "Electronic Pulse",
+      "target_label": "Folk Pop"
+    },
+    {
+      "source": 4,
+      "target": 7,
+      "weight": 0.8823,
+      "source_label": "Electronic Pulse",
+      "target_label": "Indie Delights"
+    },
+    {
+      "source": 6,
+      "target": 7,
+      "weight": 0.867,
+      "source_label": "Folk Pop",
+      "target_label": "Indie Delights"
+    }
+  ],
+  "threshold": 0.2
+}

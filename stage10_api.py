@@ -185,9 +185,10 @@ def _build_mood_index(collection, mood_labels: list[str]) -> dict:
 class GenerateRequest(BaseModel):
     seed_track_id: Optional[str] = Field(None, description="Exact song ID in the DB")
     seed_query:    Optional[str] = Field(None, description="Partial song name search")
-    mood_arc:      list[str]     = Field(...,  description="Ordered list of mood labels, e.g. ['Mellow Tunes','High Energy']")
+    mood_arc:      list[str]     = Field(...,  description="Ordered list of mood labels")
     temperature:   float         = Field(0.8,  ge=0.05, le=3.0)
     playlist_len:  int           = Field(20,   ge=5, le=50)
+    language:      Optional[str] = Field(None, description="Language filter: en, hi, ja, ko, fr, etc.")
 
 
 class SongOut(BaseModel):
@@ -220,7 +221,7 @@ def _mood_vec(mood_score: dict, mood_labels: list[str]) -> np.ndarray:
     return np.array([mood_score.get(l, 0.0) for l in mood_labels], dtype=np.float32)
 
 
-def _parse_candidate(rid, meta, emb, mood_label, require_dominant=False):
+def _parse_candidate(rid, meta, emb, mood_label, require_dominant=False, language=None):
     ms_raw     = meta.get("mood_scores", "{}")
     ms         = json.loads(ms_raw) if isinstance(ms_raw, str) else ms_raw
     mood_score = ms.get(mood_label, 0.0)
@@ -239,20 +240,23 @@ def _parse_candidate(rid, meta, emb, mood_label, require_dominant=False):
         if mood_score <= 0.15:
             return None
 
+    if language and meta.get("language", "en") != language:
+        return None
+
     return {
-        "id":          rid,
-        "name":        meta.get("name", "?"),
-        "artist":      meta.get("artist", "?"),
-        "embedding":   emb,
-        "mood_score":  mood_score,
-        "mood_scores": ms,
-        "tempo":       float(meta.get("tempo", 0)),
-        "energy_mean": float(meta.get("energy_mean", 0)),
+        "id":            rid,
+        "name":          meta.get("name", "?"),
+        "artist":        meta.get("artist", "?"),
+        "embedding":     emb,
+        "mood_score":    mood_score,
+        "mood_scores":   ms,
+        "tempo":         float(meta.get("tempo", 0)),
+        "energy_mean":   float(meta.get("energy_mean", 0)),
         "valence_proxy": float(meta.get("valence_proxy", 0)),
     }
 
 
-def _get_candidates_graph(graph, collection, src_id, mood_label, played, src_emb):
+def _get_candidates_graph(graph, collection, src_id, mood_label, played, src_emb, language=None):
     edges = graph.get(src_id, [])
     if not edges:
         return []
@@ -271,14 +275,14 @@ def _get_candidates_graph(graph, collection, src_id, mood_label, played, src_emb
 
     candidates = []
     for rid, meta, emb in zip(result["ids"], result["metadatas"], result["embeddings"]):
-        c = _parse_candidate(rid, meta, emb, mood_label)
+        c = _parse_candidate(rid, meta, emb, mood_label, language=language)
         if c:
             c["graph_score"] = graph_scores.get(rid, 0.0)
             candidates.append(c)
     return candidates
 
 
-def _get_candidates_ann(collection, src_emb, mood_label, played, k=60):
+def _get_candidates_ann(collection, src_emb, mood_label, played, k=60, language=None):
     results = collection.query(
         query_embeddings=[src_emb],
         n_results=k + 10,
@@ -290,7 +294,7 @@ def _get_candidates_ann(collection, src_emb, mood_label, played, k=60):
     ):
         if rid in played:
             continue
-        c = _parse_candidate(rid, meta, emb, mood_label)
+        c = _parse_candidate(rid, meta, emb, mood_label, language=language)
         if c:
             c["source"] = "ann"
             candidates.append(c)
@@ -299,7 +303,7 @@ def _get_candidates_ann(collection, src_emb, mood_label, played, k=60):
     return candidates
 
 
-def _get_candidates_global(collection, mood_index, mood_label, played, k=60):
+def _get_candidates_global(collection, mood_index, mood_label, played, k=60, language=None):
     pool = [sid for sid in mood_index.get(mood_label, []) if sid not in played]
     if not pool:
         return []
@@ -307,7 +311,7 @@ def _get_candidates_global(collection, mood_index, mood_label, played, k=60):
     result = collection.get(ids=sample[:k], include=["embeddings", "metadatas"])
     candidates = []
     for rid, meta, emb in zip(result["ids"], result["metadatas"], result["embeddings"]):
-        c = _parse_candidate(rid, meta, emb, mood_label, require_dominant=True)
+        c = _parse_candidate(rid, meta, emb, mood_label, require_dominant=True, language=language)
         if c:
             c["source"] = "global"
             candidates.append(c)
@@ -324,19 +328,19 @@ def _merge_candidates(existing, new):
     return merged
 
 
-def _get_candidates_tiered(graph, collection, mood_index, current, mood, played):
+def _get_candidates_tiered(graph, collection, mood_index, current, mood, played, language=None):
     candidates = _get_candidates_graph(
-        graph, collection, current["id"], mood, played, current["embedding"]
+        graph, collection, current["id"], mood, played, current["embedding"], language=language
     )
     if len(candidates) >= 3:
         return candidates
 
-    ann = _get_candidates_ann(collection, current["embedding"], mood, played, k=EXPAND_K)
+    ann = _get_candidates_ann(collection, current["embedding"], mood, played, k=EXPAND_K, language=language)
     candidates = _merge_candidates(candidates, ann)
     if len(candidates) >= 3:
         return candidates
 
-    glob = _get_candidates_global(collection, mood_index, mood, played, k=GLOBAL_K)
+    glob = _get_candidates_global(collection, mood_index, mood, played, k=GLOBAL_K, language=language)
     candidates = _merge_candidates(candidates, glob)
     return candidates
 
@@ -424,6 +428,7 @@ def generate_playlist(
     seed_meta,
     playlist_length,
     temperature,
+    language=None,
 ) -> list[dict]:
     """Core sampler — adapted from stage9, returns list of song dicts."""
     ms_raw = seed_meta.get("mood_scores", "{}")
@@ -475,11 +480,11 @@ def generate_playlist(
                 got_bridge = bool(candidates)
                 if not candidates:
                     candidates = _get_candidates_tiered(
-                        graph, collection, mood_index, current, mood, played
+                        graph, collection, mood_index, current, mood, played, language=language
                     )
             else:
                 candidates = _get_candidates_tiered(
-                    graph, collection, mood_index, current, mood, played
+                    graph, collection, mood_index, current, mood, played, language=language
                 )
 
             if not candidates:
@@ -553,13 +558,25 @@ def _resolve_seed_by_query(collection, query: str):
     return _resolve_seed_by_id(collection, rows[0]["id"])
 
 
-def _resolve_seed_random(collection, mood_index: dict, first_mood: str):
+def _resolve_seed_random(collection, mood_index, first_mood, language=None):  # ← add language
     pool = mood_index.get(first_mood, [])
+    chosen_id = None
     if pool:
-        chosen_id = random.choice(pool)
-        result    = collection.get(ids=[chosen_id], include=["embeddings", "metadatas"])
+        if language:
+            sample_ids = random.sample(pool, min(200, len(pool)))
+            result_sample = collection.get(ids=sample_ids, include=["metadatas"])
+            filtered_ids = [
+                sid for sid, meta in zip(result_sample["ids"], result_sample["metadatas"])
+                if meta.get("language", "en") == language
+            ]
+            chosen_id = random.choice(filtered_ids) if filtered_ids else random.choice(pool)
+        else:
+            chosen_id = random.choice(pool)
+
+    if chosen_id:
+        result = collection.get(ids=[chosen_id], include=["embeddings", "metadatas"])
     else:
-        result    = collection.get(limit=1, include=["embeddings", "metadatas"])
+        result = collection.get(limit=1, include=["embeddings", "metadatas"])
 
     meta               = result["metadatas"][0]
     meta["_id"]        = result["ids"][0]
@@ -669,7 +686,7 @@ def generate(req: GenerateRequest):
         seed_name = seed_meta.get("name")
     else:
         seed_id, seed_meta = _resolve_seed_random(
-            r["collection"], r["mood_index"], req.mood_arc[0]
+            r["collection"], r["mood_index"], req.mood_arc[0], language=req.language  # ← pass language to seed resolver
         )
         seed_name = seed_meta.get("name")
 
@@ -684,6 +701,7 @@ def generate(req: GenerateRequest):
         seed_meta      = seed_meta,
         playlist_length= req.playlist_len,
         temperature    = req.temperature,
+        language       = req.language,  # ← pass language to sampler
     )
 
     # save to disk (mirrors stage9 behaviour)

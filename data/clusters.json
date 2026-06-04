@@ -1,0 +1,98 @@
+{
+  "0": {
+    "label": "Upbeat Dance",
+    "description": "Energetic and lively tracks to get you moving on the dance floor",
+    "size": 1484,
+    "song_ids": [
+      "1Uu1dI6OcKWuMLLv8ki3lN",
+      "7uXjp2aXpQHiPQpvthEiTi",
+      "2F0BHgRpe2qHKo9TPYCdvY",
+      "1fGqXnx6lkyfCUTORlPYT6",
+      "21e5Wz2fPNxc4g5ckhcbRu"
+    ]
+  },
+  "1": {
+    "label": "Energetic Beats",
+    "description": "Fast-paced and energetic songs to boost your mood and keep you active",
+    "size": 1857,
+    "song_ids": [
+      "2zpHG3JcIbaA6p93O8iEQ0",
+      "4lhqb6JvbHId48OUJGwymk",
+      "1JTDSEyewEX9CTEcZnOcRX",
+      "2r9hCNjupNy2C2g3r6SNz6",
+      "0Jm9mFzDdOs44fbpRtg0eW"
+    ]
+  },
+  "2": {
+    "label": "Mellow Tunes",
+    "description": "Soothing and calming music to help you unwind and relax",
+    "size": 1470,
+    "song_ids": [
+      "1x1e7T0TFQP9tv4OJaj5qf",
+      "25lkpWDr2d3aMCJh2GliZy",
+      "4nP86q91nSOxRoIXoPGJB6",
+      "0pw3p4gf5homOkvOGOJulF",
+      "2RVWKbMCQwaIAJS5FXNanZ"
+    ]
+  },
+  "3": {
+    "label": "High Energy",
+    "description": "Intense and dynamic tracks to fuel your workouts and high-energy activities",
+    "size": 1745,
+    "song_ids": [
+      "5s0EfEeKJcmqfE4nalOvcG",
+      "26IowPnEUOTgxPAPqakgw1",
+      "5Qxv77f2INpoE1OeaOynrT",
+      "4BRzO5No6i3ax8uQYP6zuY",
+      "5ZaKWYtQTpOyRogPpE5Tyj"
+    ]
+  },
+  "4": {
+    "label": "Electronic Pulse",
+    "description": "Infectious and rhythmic electronic music to keep you moving and grooving",
+    "size": 688,
+    "song_ids": [
+      "010189igJXAPKuys4itwaE",
+      "3T7hcWKrSzMOTJiYne8nxY",
+      "0mV5JWhyUFANd9qpwLkM8d",
+      "5UCxWGNXG4kjBmpftwyctt",
+      "7wlDCYTcXbNYF9RsKN5lpp"
+    ]
+  },
+  "5": {
+    "label": "Experimental Vibes",
+    "description": "Unique and eclectic soundscapes to challenge your musical tastes and broaden your horizons",
+    "size": 23,
+    "song_ids": [
+      "2c9WHRcTXI4CKJ88QiJcbI",
+      "1V8TQ7Uhauq1GdhctrMJf9",
+      "41uOgN1kdvQ7prybDvKu7Q",
+      "65JuWImqROwMyJrZGbJ8qs",
+      "7DEjDauyIpn7JPODqRbZo5"
+    ]
+  },
+  "6": {
+    "label": "Folk Pop",
+    "description": "Catchy and upbeat folk-inspired music with a pop twist",
+    "size": 1148,
+    "song_ids": [
+      "2m8dDOhC8fIaCFQ53c1l5z",
+      "73EFmhx2tU7sN9YvnegEj0",
+      "1y6DJDkhlYz6X35HV7BgsK",
+      "3VX2JAoUxJtPIO4ve1YWIW",
+      "7kLa2XlVc9Zr6mNgnEr0SO"
+    ]
+  },
+  "7": {
+    "label": "Indie Delights",
+    "description": "Quirky and charming indie tracks to discover new favorite artists and sounds",
+    "size": 1527,
+    "song_ids": [
+      "2cCvJe91VvU71UbOuBdrx1",
+      "4DTGLPQPkto00HaMxlGLZm",
+      "2MuOJXZSH66oW72tEjoCqQ",
+      "1KnNbJ2Btm3AgpGQDy9utV",
+      "6twvFrIoIINH8UW8EB8OnU"
+    ]
+  }
+}

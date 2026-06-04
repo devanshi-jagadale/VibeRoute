@@ -174,7 +174,8 @@ def resolve_seed(collection, query: str) -> tuple[str, dict]:
 # ── Candidate helpers ─────────────────────────────────────────────────────────
 
 def _parse_candidate(rid: str, meta: dict, emb: list, mood_label: str,
-                     graph_score=None, require_dominant: bool = False) -> dict | None:
+                     graph_score=None, require_dominant: bool = False,
+                     language: str | None = None) -> dict | None:
     """
     Parse a ChromaDB result into a candidate dict.
 
@@ -203,6 +204,10 @@ def _parse_candidate(rid: str, meta: dict, emb: list, mood_label: str,
         if mood_score <= 0.15:
             return None
 
+    # language filter
+    if language and meta.get("language", "en") != language:
+        return None
+
     return {
         "id":          rid,
         "name":        meta.get("name", "?"),
@@ -214,6 +219,7 @@ def _parse_candidate(rid: str, meta: dict, emb: list, mood_label: str,
         "energy":      float(meta.get("energy_mean", 0)),
         "valence":     float(meta.get("valence_proxy", 0)),
         "graph_score": graph_score,
+        "language":    meta.get("language", "en"),
     }
 
 
@@ -227,6 +233,7 @@ def get_candidates_from_graph(
     played: set,
     fallback_embedding: list,
     k: int = CANDIDATE_K,
+    language: str | None = None,
 ) -> list[dict]:
     """
     Tier 1: walk pre-scored graph edges.
@@ -244,7 +251,8 @@ def get_candidates_from_graph(
     candidates = []
     for rid, meta, emb in zip(result["ids"], result["metadatas"], result["embeddings"]):
         c = _parse_candidate(rid, meta, emb, mood_label,
-                             graph_score=edge_score_map.get(rid, 0.0))
+                             graph_score=edge_score_map.get(rid, 0.0),
+                             language=language)
         if c:
             c["source"] = "graph"
             candidates.append(c)
@@ -259,6 +267,7 @@ def get_candidates_ann(
     mood_label: str,
     played: set,
     k: int = CANDIDATE_K,
+    language: str | None = None,
 ) -> list[dict]:
     """
     Tier 2: ChromaDB ANN query from current embedding, filtered by mood.
@@ -279,7 +288,7 @@ def get_candidates_ann(
     ):
         if rid in played:
             continue
-        c = _parse_candidate(rid, meta, emb, mood_label)
+        c = _parse_candidate(rid, meta, emb, mood_label, language=language)
         if c:
             c["distance"] = dist
             c["source"]   = "ann"
@@ -295,6 +304,7 @@ def get_candidates_global(
     mood_label: str,
     played: set,
     k: int = GLOBAL_K,
+    language: str | None = None,
 ) -> list[dict]:
     """
     Tier 3: global mood-first search using pre-built mood_index.
@@ -312,7 +322,7 @@ def get_candidates_global(
 
     candidates = []
     for rid, meta, emb in zip(result["ids"], result["metadatas"], result["embeddings"]):
-        c = _parse_candidate(rid, meta, emb, mood_label, require_dominant=True)
+        c = _parse_candidate(rid, meta, emb, mood_label, require_dominant=True, language=language)
         if c:
             c["source"] = "global"
             candidates.append(c)
@@ -502,15 +512,8 @@ def generate_playlist(
     seed_meta: dict,
     playlist_length: int = DEFAULT_LENGTH,
     temperature: float = DEFAULT_TEMP,
+    language: str | None = None,
 ) -> list[dict]:
-    """
-    Generate a playlist following the mood arc.
-    Three-tier candidate strategy per step:
-      1. Graph edges (pre-scored, acoustically local)
-      2. ChromaDB ANN (acoustically local, no graph score)
-      3. Global mood index (mood-first, ignores proximity)
-    Mood blend weight increases across arc zones to ensure the arc lands.
-    """
     valid_moods = set(mood_labels)
     for m in mood_arc:
         if m not in valid_moods:
@@ -519,7 +522,6 @@ def generate_playlist(
     playlist = []
     played   = set()
 
-    # build seed entry
     current = {
         "id":          seed_id,
         "name":        seed_meta.get("name", "?"),
@@ -536,7 +538,6 @@ def generate_playlist(
     playlist.append(current)
     played.add(seed_id)
 
-    # distribute songs across arc zones
     n_zones        = len(mood_arc)
     songs_per_zone = (playlist_length - 1) // n_zones
     remainder      = (playlist_length - 1) % n_zones
@@ -551,8 +552,6 @@ def generate_playlist(
         is_last_zone = zone_idx == n_zones - 1
         next_mood    = mood_arc[zone_idx + 1] if not is_last_zone else None
 
-        # mood blend weight increases as we move through the arc
-        # starts at 0.4, reaches 0.7 at the last zone — forces arc to actually land
         zone_progress = zone_idx / max(n_zones - 1, 1)
         mood_alpha    = 0.4 + 0.3 * zone_progress
 
@@ -574,15 +573,16 @@ def generate_playlist(
                 )
                 got_bridge = bool(candidates)
                 if not candidates:
-                    # no bridge found — fall through to normal candidate chain
                     candidates = _get_candidates_tiered(
                         graph, collection, mood_index,
                         current, mood, played,
+                        language=language,              # ← fix
                     )
             else:
                 candidates = _get_candidates_tiered(
                     graph, collection, mood_index,
                     current, mood, played,
+                    language=language,                  # ← fix
                 )
 
             if not candidates:
@@ -616,6 +616,7 @@ def _get_candidates_tiered(
     current: dict,
     mood: str,
     played: set,
+    language: str | None = None,
 ) -> list[dict]:
     """
     Three-tier candidate fetch with graceful fallback.
@@ -626,20 +627,23 @@ def _get_candidates_tiered(
         graph, collection,
         current["id"], mood, played,
         current["embedding"],
+        language=language,
     )
     if len(candidates) >= 3:
         return candidates
 
     # Tier 2: ANN from current embedding
     ann = get_candidates_ann(
-        collection, current["embedding"], mood, played, k=EXPAND_K
+        collection, current["embedding"], mood, played, k=EXPAND_K,
+        language=language,
     )
     candidates = _merge_candidates(candidates, ann)
     if len(candidates) >= 3:
         return candidates
 
     # Tier 3: global mood index
-    glob = get_candidates_global(collection, mood_index, mood, played, k=GLOBAL_K)
+    glob = get_candidates_global(collection, mood_index, mood, played, k=GLOBAL_K,
+                                  language=language)
     candidates = _merge_candidates(candidates, glob)
     return candidates
 
@@ -673,7 +677,6 @@ def print_playlist(playlist: list[dict], mood_arc: list[str]):
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
-
 def run(
     arc: list[str],
     seed_query: str | None,
@@ -681,6 +684,7 @@ def run(
     temperature: float,
     use_cosine: bool = False,
     rebuild_index: bool = False,
+    language: str | None = None,
 ):
     global USE_ML_SCORER
     if use_cosine:
@@ -690,7 +694,6 @@ def run(
 
     print(f"\n   Available moods: {mood_labels}")
 
-    # warn if any arc mood has too few songs in the index
     for mood in arc:
         count = len(mood_index.get(mood, []))
         if count < 100:
@@ -699,19 +702,40 @@ def run(
     if seed_query:
         seed_id, seed_meta = resolve_seed(collection, seed_query)
     else:
-        # pick seed from the first arc zone so the playlist starts on-mood
         first_mood = arc[0]
         pool       = mood_index.get(first_mood, [])
+        chosen_id  = None
+
         if pool:
-            chosen_id = random.choice(pool)
-            result    = collection.get(ids=[chosen_id], include=["embeddings", "metadatas"])
+            if language:
+                # sample a subset and filter by language to avoid fetching entire pool
+                sample_ids = random.sample(pool, min(200, len(pool)))
+                result_sample = collection.get(ids=sample_ids, include=["metadatas"])
+                filtered_ids = [
+                    sid for sid, meta in zip(result_sample["ids"], result_sample["metadatas"])
+                    if meta.get("language", "en") == language
+                ]
+                if filtered_ids:
+                    chosen_id = random.choice(filtered_ids)
+                else:
+                    print(f"   ⚠️  No '{language}' seed found in '{first_mood}' — using any language")
+                    chosen_id = random.choice(pool)
+            else:
+                chosen_id = random.choice(pool)
+
+        if chosen_id:
+            result = collection.get(ids=[chosen_id], include=["embeddings", "metadatas"])
         else:
-            result    = collection.get(limit=1, include=["embeddings", "metadatas"])
-        seed_id    = result["ids"][0]
-        seed_meta  = result["metadatas"][0]
+            result = collection.get(limit=1, include=["embeddings", "metadatas"])
+
+        seed_id              = result["ids"][0]
+        seed_meta            = result["metadatas"][0]
         seed_meta["_id"]        = seed_id
         seed_meta["_embedding"] = result["embeddings"][0]
         print(f"   🎵 Seed (from '{first_mood}'): {seed_meta.get('name')} — {seed_meta.get('artist')}")
+
+    if language:
+        print(f"   🌐 Language filter: {language}")
 
     playlist = generate_playlist(
         collection, mood_labels, graph, mood_index, model,
@@ -720,6 +744,7 @@ def run(
         seed_meta=seed_meta,
         playlist_length=length,
         temperature=temperature,
+        language=language,
     )
 
     if len(playlist) < length:
@@ -738,7 +763,6 @@ def run(
         } for s in playlist], f, indent=2)
     print(f"\n💾 Saved → {out_path}")
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--arc",           type=str, default=",".join(DEFAULT_ARC),
@@ -751,6 +775,8 @@ if __name__ == "__main__":
                         help="Use cosine fallback instead of MLP")
     parser.add_argument("--rebuild-index", action="store_true",
                         help="Force rebuild of mood_index.json")
+    parser.add_argument("--lang",          type=str, default=None,
+                        help="Language filter: en, hi, ja, ko, fr, etc.")
     args = parser.parse_args()
 
     arc = [m.strip() for m in args.arc.split(",")]
@@ -761,4 +787,5 @@ if __name__ == "__main__":
         temperature=args.temp,
         use_cosine=args.cosine,
         rebuild_index=args.rebuild_index,
+        language=args.lang,
     )
