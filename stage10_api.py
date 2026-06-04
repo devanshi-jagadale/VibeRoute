@@ -46,7 +46,8 @@ load_dotenv()
 
 # ── Paths (mirror stage9) ──────────────────────────────────────────────────────
 
-DATA_DIR        = Path("data")
+BASE_DIR        = Path(__file__).resolve().parent
+DATA_DIR        = BASE_DIR / "data"
 CHROMA_DIR      = str(DATA_DIR / "chromadb")
 MODEL_PATH      = DATA_DIR / "mlp_classifier.pt"
 MOOD_INDEX_PATH = DATA_DIR / "mood_index.json"
