@@ -32,6 +32,7 @@ Usage:
 import os
 import json
 import random
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -79,13 +80,13 @@ app.add_middleware(
 # ── Global state (loaded once at startup) ─────────────────────────────────────
 
 _resources: dict = {}
+_ready: bool = False
 
 
 def get_resources() -> dict:
-    """Lazy-load all resources on first request."""
-    if _resources:
-        return _resources
-    _load_all()
+    """Return resources, or 503 if still loading."""
+    if not _resources:
+        raise HTTPException(503, "Server is still warming up — try again in a moment")
     return _resources
 
 
@@ -712,8 +713,6 @@ def health():
 
 @app.get("/moods")
 def get_moods():
-    if not _resources:
-        raise HTTPException(503, "Server is still loading, try again in a moment")
     r = get_resources()
     return {
         "moods":      r["mood_labels"],
@@ -1074,4 +1073,9 @@ async def spotify_save(req: SpotifySaveRequest):
 
 @app.on_event("startup")
 async def startup_event():
-    _load_all()
+    """Load resources in a background thread so the port binds immediately."""
+    def _bg():
+        global _ready
+        _load_all()
+        _ready = True
+    threading.Thread(target=_bg, daemon=True).start()
