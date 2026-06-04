@@ -700,6 +700,8 @@ def _song_out(song: dict, include_transition: bool = True) -> SongOut:
 
 @app.get("/health")
 def health():
+    if not _resources:
+        return {"status": "loading", "songs": 0, "moods": []}
     r = get_resources()
     return {
         "status": "ok",
@@ -1067,7 +1069,15 @@ async def spotify_save(req: SpotifySaveRequest):
 
 # ── Startup ───────────────────────────────────────────────────────────────────
 
+# ── Startup ───────────────────────────────────────────────────────────────────
+
+import asyncio
+
 @app.on_event("startup")
 async def startup_event():
-    """Pre-load all resources so the first request isn't slow."""
-    _load_all()
+    """Load resources in background so port opens immediately."""
+    asyncio.create_task(_startup_background())
+
+async def _startup_background():
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _load_all)
