@@ -712,7 +712,8 @@ def health():
 
 @app.get("/moods")
 def get_moods():
-    """Return all mood nodes + valid edges from the macro mood graph."""
+    if not _resources:
+        raise HTTPException(503, "Server is still loading, try again in a moment")
     r = get_resources()
     return {
         "moods":      r["mood_labels"],
