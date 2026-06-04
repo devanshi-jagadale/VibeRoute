@@ -42,13 +42,18 @@ from pydantic import BaseModel, Field
 
 from dotenv import load_dotenv
 
+_SPOTIFY_CLIENT_ID     = os.getenv("SPOTIFY_CLIENT_ID", "")
+_SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "")
+_SPOTIFY_REDIRECT_URI  = os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8000/spotify/callback")
+_SPOTIFY_SCOPES = ("user-read-private playlist-modify-public playlist-modify-private")
+
 load_dotenv()
 
 # ── Paths (mirror stage9) ──────────────────────────────────────────────────────
-
 BASE_DIR        = Path(__file__).resolve().parent
 DATA_DIR        = BASE_DIR / "data"
 CHROMA_DIR      = str(DATA_DIR / "chromadb")
+DB_PATH         = DATA_DIR / "songs.db"          # ← add this
 MODEL_PATH      = DATA_DIR / "mlp_classifier.pt"
 MOOD_INDEX_PATH = DATA_DIR / "mood_index.json"
 CLUSTERS_PATH   = DATA_DIR / "clusters.json"
@@ -90,7 +95,14 @@ def _load_all():
 
     print("🚀 Loading pipeline resources...")
 
-    client     = chromadb.PersistentClient(path=CHROMA_DIR)
+    client = chromadb.PersistentClient(path=CHROMA_DIR)
+
+    # ── Rebuild ChromaDB if collection missing ────────────────────────────────
+    existing = [c.name for c in client.list_collections()]
+    if "songs" not in existing:
+        print("   ⚠️  ChromaDB 'songs' collection not found — rebuilding from songs.db...")
+        _rebuild_chromadb(client)
+
     collection = client.get_collection("songs")
 
     with open(CLUSTERS_PATH) as f:
@@ -105,11 +117,10 @@ def _load_all():
     if MOOD_GRAPH_PATH.exists():
         with open(MOOD_GRAPH_PATH) as f:
             mood_graph = json.load(f)
-    
+
     print("CLIENT ID =", _SPOTIFY_CLIENT_ID)
     print("CLIENT SECRET EXISTS =", bool(_SPOTIFY_CLIENT_SECRET))
 
-    # mood index
     if MOOD_INDEX_PATH.exists():
         with open(MOOD_INDEX_PATH) as f:
             mood_index = json.load(f)
@@ -117,7 +128,6 @@ def _load_all():
     else:
         mood_index = _build_mood_index(collection, mood_labels)
 
-    # MLP (optional — falls back to cosine if missing)
     model = None
     if MODEL_PATH.exists():
         model = _load_mlp()
@@ -135,6 +145,92 @@ def _load_all():
         "model":       model,
     })
     print(f"   ✅ {collection.count()} songs | {len(mood_labels)} moods | ready\n")
+
+
+def _rebuild_chromadb(client):
+    """Rebuild the ChromaDB songs collection from songs.db + saved models."""
+    import sqlite3, pickle, json
+    import numpy as np
+    import umap
+
+    FEATURE_COLS = [
+        "tempo", "energy_mean", "energy_std",
+        "valence_proxy", "danceability_proxy", "acousticness_proxy",
+        "spectral_centroid", "spectral_bandwidth", "spectral_rolloff",
+        "spectral_contrast", "zcr", "chroma_mean", "chroma_std",
+        *[f"mfcc_{i}" for i in range(1, 14)],
+    ]
+
+    DB_PATH = BASE_DIR / "data" / "songs.db"
+
+    # 1. Load features from SQLite
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT s.id, s.name, s.artist, s.album, s.year, s.language,
+               f.tempo, f.energy_mean, f.energy_std,
+               f.valence_proxy, f.danceability_proxy, f.acousticness_proxy,
+               f.spectral_centroid, f.spectral_bandwidth, f.spectral_rolloff,
+               f.spectral_contrast, f.zcr, f.chroma_mean, f.chroma_std,
+               f.mfcc_1,  f.mfcc_2,  f.mfcc_3,  f.mfcc_4,  f.mfcc_5,
+               f.mfcc_6,  f.mfcc_7,  f.mfcc_8,  f.mfcc_9,  f.mfcc_10,
+               f.mfcc_11, f.mfcc_12, f.mfcc_13,
+               sm.mood_scores
+        FROM features f
+        JOIN songs s ON s.id = f.song_id
+        LEFT JOIN song_moods sm ON sm.song_id = f.song_id
+        ORDER BY f.song_id
+    """).fetchall()
+    conn.close()
+    print(f"   📂 Loaded {len(rows)} songs from SQLite")
+
+    ids, metadatas, vectors = [], [], []
+    for row in rows:
+        r = dict(row)
+        ids.append(r["id"])
+        meta = {
+            "name":   r["name"],
+            "artist": r["artist"],
+            "album":  r.get("album", "") or "",
+            "year":   str(r.get("year", "") or ""),
+            "language": r.get("language", "en") or "en",
+            "mood_scores": r.get("mood_scores", "{}") or "{}",
+            **{k: float(r[k]) for k in FEATURE_COLS},
+        }
+        metadatas.append(meta)
+        vectors.append([float(r[k]) for k in FEATURE_COLS])
+
+    X = np.array(vectors, dtype=np.float32)
+
+    # 2. Scale using saved scaler
+    SCALER_PATH = BASE_DIR / "data" / "scaler.pkl"
+    with open(SCALER_PATH, "rb") as f:
+        scaler = pickle.load(f)
+    X_scaled = scaler.transform(X)
+
+    # 3. Embed using saved UMAP model
+    UMAP_PATH = BASE_DIR / "data" / "umap_model.pkl"
+    with open(UMAP_PATH, "rb") as f:
+        reducer = pickle.load(f)
+    embeddings = reducer.transform(X_scaled)
+    print(f"   ✅ Embeddings shape: {embeddings.shape}")
+
+    # 4. Push to ChromaDB
+    collection = client.create_collection(
+        "songs",
+        metadata={"hnsw:space": "l2"},
+    )
+    BATCH = 500
+    for start in range(0, len(ids), BATCH):
+        end = start + BATCH
+        collection.add(
+            ids=ids[start:end],
+            embeddings=embeddings[start:end].tolist(),
+            metadatas=metadatas[start:end],
+        )
+        print(f"   ↳ Inserted {min(end, len(ids))}/{len(ids)}")
+
+    print(f"   ✅ ChromaDB rebuilt — {collection.count()} songs")
 
 
 def _load_mlp():
@@ -753,11 +849,6 @@ import base64 as _base64
 import secrets as _secrets
 import httpx as _httpx
 from fastapi.responses import HTMLResponse as _HTMLResponse, RedirectResponse as _RedirectResponse
-
-_SPOTIFY_CLIENT_ID     = os.getenv("SPOTIFY_CLIENT_ID", "")
-_SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "")
-_SPOTIFY_REDIRECT_URI  = os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8000/spotify/callback")
-_SPOTIFY_SCOPES = ("user-read-private playlist-modify-public playlist-modify-private")
 
 # In-memory state store (good enough for local/single-user; swap for Redis in prod)
 _oauth_states: dict[str, str] = {}
