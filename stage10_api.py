@@ -1076,6 +1076,11 @@ async def startup_event():
     """Load resources in a background thread so the port binds immediately."""
     def _bg():
         global _ready
-        _load_all()
-        _ready = True
+        try:
+            _load_all()
+            _ready = True
+        except Exception as e:
+            import traceback
+            print("❌ STARTUP FAILED:", e)
+            traceback.print_exc()
     threading.Thread(target=_bg, daemon=True).start()
