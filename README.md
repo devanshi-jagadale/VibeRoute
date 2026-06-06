@@ -99,6 +99,22 @@ Higher temperatures:
 
 ---
 
+### 🌐 Language Filtering
+
+Filter playlists to songs in a specific language.
+
+```bash
+python stage9_sampler.py --arc "Mellow Reflections,Folk Inspired" --lang hi   # Hindi only
+python stage9_sampler.py --arc "Indie Delights,Energetic Anthems" --lang en   # English only
+python stage9_sampler.py --arc "Upbeat Dance,High Energy Party"   --lang ko   # Korean only
+```
+
+Supported language codes follow ISO 639-1 (`en`, `hi`, `ja`, `ko`, `fr`, `pt`, etc.).
+
+Language filtering applies to both seed selection and all candidate retrieval tiers. If no seed is available in the requested language within the first mood zone, the system falls back to any language automatically.
+
+---
+
 ### 🎵 Spotify Integration
 
 Generated playlists can be exported directly to Spotify through OAuth authentication.
@@ -500,8 +516,6 @@ Smooth transitions across all 3 mood zones, 20 songs total.
 ---
 
 # 🔮 Future Improvements
-
-- Language filtering
 - Genre filtering
 - User profiles
 - Playlist sharing
