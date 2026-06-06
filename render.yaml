@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: viberoute-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: SPOTIFY_REDIRECT_URI
+        value: https://viberoute-api.onrender.com/spotify/callback
+      - key: GROQ_API_KEY
+        sync: false

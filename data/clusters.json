@@ -1,7 +1,7 @@
 {
   "0": {
     "label": "Upbeat Dance",
-    "description": "Energetic and lively tracks to get you moving on the dance floor",
+    "description": "Energetic and lively tracks with a strong danceable beat, perfect for getting you on your feet and moving.",
     "size": 1484,
     "song_ids": [
       "1Uu1dI6OcKWuMLLv8ki3lN",
@@ -12,8 +12,8 @@
     ]
   },
   "1": {
-    "label": "Energetic Beats",
-    "description": "Fast-paced and energetic songs to boost your mood and keep you active",
+    "label": "Energetic Anthems",
+    "description": "Inspirational and motivational songs with a fast-paced tempo, ideal for working out or getting pumped up.",
     "size": 1857,
     "song_ids": [
       "2zpHG3JcIbaA6p93O8iEQ0",
@@ -24,8 +24,8 @@
     ]
   },
   "2": {
-    "label": "Mellow Tunes",
-    "description": "Soothing and calming music to help you unwind and relax",
+    "label": "Mellow Reflections",
+    "description": "Soothing and calming music with a slower tempo, great for unwinding and reflecting on life.",
     "size": 1470,
     "song_ids": [
       "1x1e7T0TFQP9tv4OJaj5qf",
@@ -36,8 +36,8 @@
     ]
   },
   "3": {
-    "label": "High Energy",
-    "description": "Intense and dynamic tracks to fuel your workouts and high-energy activities",
+    "label": "High Energy Party",
+    "description": "Vibrant and lively tracks with a strong emphasis on danceability, perfect for getting the party started.",
     "size": 1745,
     "song_ids": [
       "5s0EfEeKJcmqfE4nalOvcG",
@@ -48,8 +48,8 @@
     ]
   },
   "4": {
-    "label": "Electronic Pulse",
-    "description": "Infectious and rhythmic electronic music to keep you moving and grooving",
+    "label": "Dynamic Beats",
+    "description": "Energetic and eclectic music with a mix of fast and slow tempos, great for keeping you engaged and entertained.",
     "size": 688,
     "song_ids": [
       "010189igJXAPKuys4itwaE",
@@ -61,7 +61,7 @@
   },
   "5": {
     "label": "Experimental Vibes",
-    "description": "Unique and eclectic soundscapes to challenge your musical tastes and broaden your horizons",
+    "description": "Unique and unconventional tracks with a focus on atmosphere and mood, ideal for fans of avant-garde music.",
     "size": 23,
     "song_ids": [
       "2c9WHRcTXI4CKJ88QiJcbI",
@@ -72,8 +72,8 @@
     ]
   },
   "6": {
-    "label": "Folk Pop",
-    "description": "Catchy and upbeat folk-inspired music with a pop twist",
+    "label": "Folk Inspired",
+    "description": "Music with a folk influence, featuring acoustic instruments and heartfelt lyrics, perfect for fans of rootsy sounds.",
     "size": 1148,
     "song_ids": [
       "2m8dDOhC8fIaCFQ53c1l5z",
@@ -85,7 +85,7 @@
   },
   "7": {
     "label": "Indie Delights",
-    "description": "Quirky and charming indie tracks to discover new favorite artists and sounds",
+    "description": "Catchy and upbeat indie tracks with a focus on melody and rhythm, great for discovering new and exciting artists.",
     "size": 1527,
     "song_ids": [
       "2cCvJe91VvU71UbOuBdrx1",

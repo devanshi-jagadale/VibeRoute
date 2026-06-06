@@ -3,27 +3,27 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const FALLBACK_MOODS = [
-  "Mellow Tunes",
-  "High Energy",
   "Upbeat Dance",
-  "Energetic Beats",
-  "Electronic Pulse",
+  "Energetic Anthems",
+  "Mellow Reflections",
+  "High Energy Party",
+  "Dynamic Beats",
   "Experimental Vibes",
-  "Folk Pop",
+  "Folk Inspired",
   "Indie Delights",
 ];
 
-// ── Palette ───────────────────────────────────────────────────────────────────
 const MOOD_COLORS = {
-  "Mellow Tunes":       { accent: "#c8a96e", glow: "#c8a96e33" },
-  "High Energy":        { accent: "#e8614a", glow: "#e8614a33" },
   "Upbeat Dance":       { accent: "#e6c84a", glow: "#e6c84a33" },
-  "Energetic Beats":    { accent: "#5ecfa0", glow: "#5ecfa033" },
-  "Electronic Pulse":   { accent: "#5ab4e8", glow: "#5ab4e833" },
+  "Energetic Anthems":  { accent: "#e8614a", glow: "#e8614a33" },
+  "Mellow Reflections": { accent: "#c8a96e", glow: "#c8a96e33" },
+  "High Energy Party":  { accent: "#e8614a", glow: "#e8614a33" },
+  "Dynamic Beats":      { accent: "#5ab4e8", glow: "#5ab4e833" },
   "Experimental Vibes": { accent: "#c86eb4", glow: "#c86eb433" },
-  "Folk Pop":           { accent: "#d4845a", glow: "#d4845a33" },
+  "Folk Inspired":      { accent: "#d4845a", glow: "#d4845a33" },
   "Indie Delights":     { accent: "#8fd45a", glow: "#8fd45a33" },
 };
+
 const DEFAULT_COLOR = { accent: "#c8a96e", glow: "#c8a96e33" };
 function moodColor(mood) { return MOOD_COLORS[mood] || DEFAULT_COLOR; }
 
