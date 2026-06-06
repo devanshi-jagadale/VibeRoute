@@ -515,6 +515,11 @@ Smooth transitions across all 3 mood zones, 20 songs total.
 
 ---
 
+## 🌐 Live Demo
+[vibe-route-jade.vercel.app](https://vibe-route-jade.vercel.app)
+
+---
+
 # 🔮 Future Improvements
 - Genre filtering
 - User profiles
