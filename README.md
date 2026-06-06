@@ -9,11 +9,11 @@ Unlike traditional recommendation systems that focus on finding similar songs, V
 Example:
 
 ```text
-Mellow Tunes
+Mellow Reflections
       ↓
-Electronic Pulse
+Dynamic Beats
       ↓
-Energetic Beats
+Energetic Anthems
 ```
 
 ---
@@ -27,11 +27,11 @@ Create playlists that follow a chosen emotional journey.
 Examples:
 
 ```text
-Mellow Tunes → Electronic Pulse → Energetic Beats
+Mellow Reflections → Dynamic Beats → Energetic Anthems
 
-Indie Delights → Upbeat Dance → High Energy
+Indie Delights → Upbeat Dance → High Energy Party
 
-Folk Pop → Mellow Tunes → Electronic Pulse
+Folk Inspired → Mellow Reflections → Dynamic Beats
 ```
 
 ---
@@ -58,9 +58,9 @@ Each song receives a continuous mood profile:
 
 ```json
 {
-  "Mellow Tunes": 0.52,
-  "Energetic Beats": 0.34,
-  "Folk Pop": 0.08
+  "Mellow Reflections": 0.72,
+  "Energetic Anthems": 0.13,
+  "Folk Inspired": 0.11
 }
 ```
 
@@ -154,10 +154,8 @@ Extracted features include:
 Result:
 
 ```text
-26-dimensional feature vector
+26-dimensional feature vector per song
 ```
-
-for every song.
 
 ---
 
@@ -186,21 +184,28 @@ The system automatically discovers moods from the dataset.
 Pipeline:
 
 1. Load UMAP embeddings
-2. Run silhouette analysis
+2. Run silhouette analysis (K = 8 to 25)
 3. Determine optimal cluster count
 4. Perform K-Means clustering
 5. Auto-name clusters using an LLM
 6. Compute mood scores for every song
 
-Example discovered moods:
+**Results (9942 songs):**
+
+| Mood | Songs |
+|------|-------|
+| Energetic Anthems | 1857 |
+| High Energy Party | 1745 |
+| Upbeat Dance | 1484 |
+| Indie Delights | 1527 |
+| Mellow Reflections | 1470 |
+| Folk Inspired | 1148 |
+| Dynamic Beats | 688 |
+| Experimental Vibes | 23 |
 
 ```text
-Mellow Tunes
-Electronic Pulse
-Energetic Beats
-Indie Delights
-Folk Pop
-Upbeat Dance
+Optimal K  : 8
+Silhouette : 0.2964
 ```
 
 Songs exist in continuous mood space rather than fixed categories.
@@ -212,6 +217,24 @@ Songs exist in continuous mood space rather than fixed categories.
 Mood clusters become graph nodes.
 
 Edges are automatically generated using similarity between cluster centroids.
+
+**Mood connectivity (cosine similarity):**
+
+| | Upbeat Dance | Energetic Anthems | Mellow Reflections | High Energy Party | Dynamic Beats | Folk Inspired | Indie Delights |
+|---|---|---|---|---|---|---|---|
+| **Upbeat Dance** | — | 0.855 | 0.735 | 0.825 | 0.777 | 0.787 | 0.887 |
+| **Energetic Anthems** | 0.855 | — | 0.870 | 0.707 | 0.749 | 0.846 | 0.837 |
+| **Mellow Reflections** | 0.735 | 0.870 | — | 0.620 | 0.722 | 0.859 | 0.762 |
+| **High Energy Party** | 0.825 | 0.707 | 0.620 | — | 0.827 | 0.732 | 0.853 |
+| **Dynamic Beats** | 0.777 | 0.749 | 0.722 | 0.827 | — | 0.856 | 0.882 |
+| **Folk Inspired** | 0.787 | 0.846 | 0.859 | 0.732 | 0.856 | — | 0.867 |
+| **Indie Delights** | 0.887 | 0.837 | 0.762 | 0.853 | 0.882 | 0.867 | — |
+
+```text
+Total edges : 21
+```
+
+> **Note:** Experimental Vibes is an isolated cluster with no edges to other moods — it represents a genuinely distinct outlier region in the embedding space and is excluded from mood arc traversal.
 
 The mood graph enables:
 
@@ -236,16 +259,19 @@ Negative examples:
 Each pair contains:
 
 ```text
-Embedding A
-Embedding B
+Embedding A      (64D)
+Embedding B      (64D)
 ΔTempo
 ΔEnergy
 ΔValence
-Mood Vector A
-Mood Vector B
+Mood Vector A    (8D)
+Mood Vector B    (8D)
 ```
 
-These pairs are used to train the transition scoring model.
+```text
+Total pairs : 50,000  (25k positive / 25k negative)
+Feature dim : 147
+```
 
 ---
 
@@ -256,13 +282,13 @@ A PyTorch neural network learns transition quality between songs.
 Architecture:
 
 ```text
-Input
+Input (147)
  ↓
-256
+256 + ReLU + Dropout(0.3)
  ↓
-128
+128 + ReLU + Dropout(0.3)
  ↓
-64
+64  + ReLU + Dropout(0.3)
  ↓
 Sigmoid
 ```
@@ -273,6 +299,16 @@ Output:
 Transition Score ∈ [0,1]
 ```
 
+**Test set results:**
+
+| Metric | Score |
+|--------|-------|
+| AUC | **0.9869** |
+| Accuracy | **95.24%** |
+| Precision | 91.27% |
+| Recall | 99.88% |
+| F1 | 95.38% |
+
 Higher scores indicate smoother musical transitions.
 
 ---
@@ -281,15 +317,17 @@ Higher scores indicate smoother musical transitions.
 
 Each song becomes a node in a sparse graph.
 
-For every song:
+For every song, top-50 nearest neighbours are retrieved and scored by the transition classifier. Low-quality edges (score < 0.3) are pruned.
+
+**Graph stats:**
 
 ```text
-Top 50 nearest neighbours
+Nodes         : 9,942
+Total edges   : 492,962
+Avg degree    : 49.6
+Isolated nodes: 0
+Pruned edges  : 4,138
 ```
-
-are retrieved and scored.
-
-Low-quality edges are removed.
 
 This creates a scalable graph suitable for real-time playlist generation.
 
@@ -318,13 +356,7 @@ Generation process:
 Result:
 
 ```text
-Coherent
-+
-Mood-Aware
-+
-Non-Repetitive
-+
-Different Every Run
+Coherent + Mood-Aware + Non-Repetitive + Different Every Run
 ```
 
 ---
@@ -419,8 +451,6 @@ Backend URL:
 http://localhost:8000
 ```
 
----
-
 ## Frontend
 
 ```bash
@@ -442,29 +472,30 @@ http://localhost:5173
 Input:
 
 ```text
-Seed Song:
-Kesariya
-
-Mood Arc:
-Mellow Tunes
-→ Electronic Pulse
-→ Energetic Beats
-
-Temperature:
-0.8
+Seed Song  : I Surrender All — David Nevue
+Mood Arc   : Mellow Reflections → Dynamic Beats → Energetic Anthems
+Temperature: 0.8
 ```
 
 Output:
 
 ```text
-Ambient / Chill Tracks
-          ↓
-Electronic Tracks
-          ↓
-High Energy Tracks
+ 1. I Surrender All               — David Nevue              [Mellow Reflections]
+ 2. Flute Quartet in D major      — Mozart / Galliano        [Mellow Reflections]
+ 3. From Gold                     — Novo Amor                [Mellow Reflections]
+ 4. Hamari Adhuri Kahani (Lofi)   — Arijit Singh             [Mellow Reflections]
+ 5. Follow                        — Martin Garrix & Zedd     [Mellow Reflections]
+         ↓
+ 9. Sentinal                      — VNV Nation               [Dynamic Beats]
+10. Troubles in Paradise          — Hozho                    [Dynamic Beats]
+11. Ich & Du                      — AKA AKA & Umami          [Dynamic Beats]
+         ↓
+15. Stephen King                  — N.I.N.A                  [Energetic Anthems]
+17. Mann Bharryaa 2.0             — B Praak                  [Energetic Anthems]
+20. Subrosa (Come Closer)         — Shenseea                 [Energetic Anthems]
 ```
 
-with smooth transitions between mood zones.
+Smooth transitions across all 3 mood zones, 20 songs total.
 
 ---
 
