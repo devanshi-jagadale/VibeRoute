@@ -33,3 +33,6 @@ Thumbs.db
 
 # Logs
 cookies.txt
+
+# Vite build output
+frontend/dist/
